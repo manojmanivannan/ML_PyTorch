@@ -9,11 +9,11 @@ class TimeSeriesDataset(Dataset):
         self.X = torch.tensor(X, dtype=torch.float32).view(-1, window_size, output_size)
         self.y = torch.tensor(y, dtype=torch.float32).view(-1, output_size)
         
-        if torch.cuda.is_available():
-            device = torch.device("cuda")
-            print(f"{label} tensors moved to GPU")
-            self.X = self.X.to(device)
-            self.y = self.y.to(device)
+        # if torch.cuda.is_available():
+        #     device = torch.device("cuda")
+        #     print(f"{label} tensors moved to GPU")
+        #     self.X = self.X.to(device)
+        #     self.y = self.y.to(device)
             
     def __len__(self):
         return len(self.X)
