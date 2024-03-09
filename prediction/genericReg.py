@@ -217,6 +217,13 @@ class StepByStep(object):
 
         torch.save(checkpoint, filename)
 
+    def save_model_class(self, filename):
+        import pickle
+ 
+
+        with open(filename, 'wb') as filehandler: 
+            pickle.dump(self.model, filehandler)
+            
     def load_checkpoint(self, filename):
         # Loads dictionary
         checkpoint = torch.load(filename)
@@ -230,7 +237,6 @@ class StepByStep(object):
         self.val_losses = checkpoint['val_loss']
 
         self.model.train() # always use TRAIN for resuming training   
-
 
     def predict(self, x):
         # Set is to evaluation mode for predictions
@@ -259,9 +265,7 @@ class StepByStep(object):
         # Fetches a single mini-batch so we can use add_graph
         if self.train_loader and self.writer:
             x_sample, y_sample = next(iter(self.train_loader))
-            here = x_sample.to(self.device)
-            # x_sample_tensor = torch.tensor(x_sample, dtype=torch.float32).to(self.device)
-            self.writer.add_graph(self.model, here, verbose=False)
+            self.writer.add_graph(self.model, x_sample.to(self.device))
 
     def count_parameters(self):
         return sum(p.numel() for p in self.model.parameters() if p.requires_grad)
