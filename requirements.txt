@@ -1,0 +1,6 @@
+pandas
+numpy
+matplotlib
+# torch --index-url https://download.pytorch.org/whl/cu118
+sweetviz
+tqdm
