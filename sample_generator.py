@@ -196,9 +196,3 @@ def stock_data_generator(start_date: tuple, end_date: tuple, freq: str='5T', per
     df.to_csv(file_path)
     return df
 
-
-df = stock_data_generator(start_date=(2023,1,1),
-                    end_date=(2023,2,2),
-                    perc_anomalies=0.08,
-                    regenerate=True
-                    )
