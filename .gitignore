@@ -3,4 +3,5 @@ data/*.csv
 __pycache__/
 model/*.npy
 model/*.pth
+model/*.pkl
 runs/

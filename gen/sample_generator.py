@@ -2,12 +2,11 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import os
-import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 
 
 
-def data_generator(start_date: tuple, end_date: tuple, freq: str='5T', perc_anomalies: float = 5, regenerate: bool = False):
+def data_generator(start_date: tuple, end_date: tuple, freq: str='5min', perc_anomalies: float = 5, regenerate: bool = False, write: bool = True):
     """
     Returns a pandas dataframe of a timeseries data 2 metrics and 1 dimensions
     and writes as csv. If a csv already exists with the same specification, reads
@@ -103,7 +102,8 @@ def data_generator(start_date: tuple, end_date: tuple, freq: str='5T', perc_anom
     })
     print('Generating data: '+file_path)
     df.set_index('datetime',drop=True, inplace=True)
-    df.to_csv(file_path)
+    if write:
+        df.to_csv(file_path)
     return df
 
 def stacked_data_generator(start_date: tuple, end_date: tuple, freq: str='5T', perc_anomalies: float = 5, regenerate: bool = False):
@@ -121,7 +121,7 @@ def stacked_data_generator(start_date: tuple, end_date: tuple, freq: str='5T', p
     return df.sample(frac=1)
 
 
-def stock_data_generator(start_date: tuple, end_date: tuple, freq: str='5T', perc_anomalies: float=5, regenerate: bool = False):
+def stock_data_generator(start_date, end_date, freq: str='5T', perc_anomalies: float=5, regenerate: bool = False, write: bool = True):
     """
     Returns a pandas dataframe of a timeseries data with stock price-like columns
     and writes as csv. If a csv already exists with the same specification, reads
@@ -136,8 +136,10 @@ def stock_data_generator(start_date: tuple, end_date: tuple, freq: str='5T', per
     Return:
         pandas dataframe
     """
-    def create_datetime(date: tuple):
-        return datetime(date[0], date[1], date[2])
+    def create_datetime(date):
+        if isinstance(date, tuple):
+            return datetime(date[0], date[1], date[2])
+        return date
     
     start = create_datetime(start_date)
     end = create_datetime(end_date)
@@ -193,6 +195,7 @@ def stock_data_generator(start_date: tuple, end_date: tuple, freq: str='5T', per
     df.rename_axis('datetime',inplace=True)
 
     print('Generating data: '+file_path)
-    df.to_csv(file_path)
+    if write:
+        df.to_csv(file_path)
     return df
 
