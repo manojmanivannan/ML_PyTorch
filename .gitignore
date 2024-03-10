@@ -2,6 +2,6 @@ venv/
 data/*.csv
 __pycache__/
 model/*.npy
-model/*.pth
+# model/*.pth
 model/*.pkl
 runs/

@@ -5,25 +5,20 @@ import torch
 import torch.nn as nn
 from typing import List
 import pickle
-try:
-    from ..prediction.nn_models import LSTM_TimeSeriesModel_2
-except ImportError:
-    from nn_models import LSTM_TimeSeriesModel_2
+from nn_models import LSTM_TimeSeriesModel_2
 
 app = FastAPI()
 
-# Load mean and std
-with open('overall_mean.pkl', 'rb') as filehandler:
-    overall_mean = pickle.load(filehandler)
-    
-with open('overall_std.pkl', 'rb') as filehandler:
-    overall_std = pickle.load(filehandler)
 
 # Load the PyTorch model checkpoint
 model_checkpoint_path = 'model_checkpoint.pth'
 
 
-model = LSTM_TimeSeriesModel_2(2,2,2)
+input_size = 2
+hidden_size = 2 
+output_size = 2
+
+model = LSTM_TimeSeriesModel_2(input_size, hidden_size, output_size)
 model.load_state_dict(torch.load(model_checkpoint_path,map_location=torch.device('cpu'))['model_state_dict'])
 
 # Set the model to evaluation mode
