@@ -1,28 +1,31 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import numpy as np
-import torch
-import torch.nn as nn
 from typing import List
-import pickle
-from nn_models import LSTM_TimeSeriesModel_2
+import json
+import onnxruntime
+import numpy as np
 
 app = FastAPI()
 
+# Load the ONNX model
+session = onnxruntime.InferenceSession("model_onnx.onnx")
 
-# Load the PyTorch model checkpoint
-model_checkpoint_path = 'model_checkpoint.pth'
+# Load model metadata
+with open('model_data.json', 'r') as f:
+    model_metadata = json.load(f)
 
 
-input_size = 2
-hidden_size = 2 
-output_size = 2
+# Define a function to perform inference
+def inference(input_data):
+    input_name = session.get_inputs()[0].name
+    output_name = session.get_outputs()[0].name
+    
+    input_data = np.array(input_data).reshape(1, model_metadata['window_size'],len(model_metadata['selected_columns']))
 
-model = LSTM_TimeSeriesModel_2(input_size, hidden_size, output_size)
-model.load_state_dict(torch.load(model_checkpoint_path,map_location=torch.device('cpu'))['model_state_dict'])
+    pred = session.run([output_name], {input_name: input_data.astype(np.float32)})[0]
+    return pred[-1]
 
-# Set the model to evaluation mode
-model.eval()
 
 # Define request body schema
 class Item(BaseModel):
@@ -35,13 +38,11 @@ class Item(BaseModel):
 async def get_prediction(item: Item):
 
     normalized_input = (item.input_data - np.array(item.mean)) / np.array(item.std)
-    # print(normalized_input)
-    input_data = torch.as_tensor(normalized_input, dtype=torch.float32).view(1, 24, 2)
 
-    with torch.no_grad():
-        output = model(input_data)
+    output = inference(normalized_input)
     
-    output = (output * np.array(item.std)) + np.array(item.mean)
+    output = np.array(output * np.array(item.std)) + np.array(item.mean)
+
     result = {"prediction": output.tolist()}
 
-    return result  # Convert tensor to list for JSON serialization
+    return result
