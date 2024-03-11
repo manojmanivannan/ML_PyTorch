@@ -5,9 +5,10 @@ FROM python:3.9-slim
 WORKDIR /app
 
 RUN pip install --no-cache-dir pandas scipy streamlit
-RUN pip install --no-cache-dir matplotlib
+RUN pip install --no-cache-dir matplotlib imageio
 COPY ./gen/sample_generator.py .
 COPY ./app_simulator/main.py .
+COPY ./model/model_data.json .
 # Copy and install dependencies
 
 

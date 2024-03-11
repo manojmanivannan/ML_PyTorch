@@ -164,6 +164,8 @@ def stock_data_generator(start_date, end_date, freq: str='5T', perc_anomalies: f
     num_samples = len(datetime_range)
     num_stocks = 2  # Number of stock-like columns
     
+    np.random.seed(42)
+    
     stock_prices = np.zeros((num_samples, num_stocks))
     for i in range(num_stocks):
         stock_prices[:, i] = np.cumsum(np.random.randn(num_samples)) + np.sin(np.linspace(0, 2 * np.pi * 17/3, num_samples))  # Random walk process

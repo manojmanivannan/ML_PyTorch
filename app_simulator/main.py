@@ -6,6 +6,8 @@ import json
 import matplotlib.pyplot as plt
 import time
 import datetime
+import imageio.v2 as imageio
+import io
 
 st.title('Stock Data Predictor')
 
@@ -37,6 +39,9 @@ def get_data():
                     )
 
 
+with open('model_data.json', 'r') as f:
+    model_metadata = json.load(f)
+window_size = model_metadata['window_size']
 
 
 df = get_data()
@@ -45,7 +50,7 @@ columns = df.columns.to_list()
 all_metrics_data = df[columns].to_numpy()
 overall_mean, overall_std = np.mean(all_metrics_data, axis=0), np.std(all_metrics_data, axis=0)
 
-X, y = create_windows(df.to_numpy(), 24)
+X, y = create_windows(df.to_numpy(), window_size)
 
 # Add prediction columns
 for col in columns:
@@ -66,29 +71,25 @@ for col in columns:
 
 
 
-
-
 def init():  # give a clean slate to start
     for line in prediction_lines:
         line.set_ydata([np.nan] * len(df.index))
 
-chunk_start = 0
-chunk_target = 24
+
+
 
 def animate(i):  # update the y values (every 1000ms)
-    global chunk_start, chunk_target
-    r = requests.post('http://torch_server:8000/predict', data=json.dumps({'input_data':X[chunk_start].tolist(), 'mean': overall_mean.tolist(), 'std': overall_std.tolist()}))
+    global window_size
+    r = requests.post('http://torch_server:8000/predict', data=json.dumps({'input_data':X[i].tolist(), 'mean': overall_mean.tolist(), 'std': overall_std.tolist()}))
       
     predictions = json.loads(r.text)['prediction']
     
     for col, pred, act_line, pred_line in zip(columns, predictions, actual_lines, prediction_lines):
     
-        df.at[df.index[chunk_target], col+'_pred'] = pred
-        act_line.set_ydata(df[col].mask(df.index > df.index[chunk_target]).tolist())
+        df.at[df.index[i+window_size], col+'_pred'] = pred
+        act_line.set_ydata(df[col].mask(df.index > df.index[i+window_size]).tolist())
         pred_line.set_ydata(df[col+'_pred'].tolist())
         
-    chunk_start+=1
-    chunk_target+=1
 
     plt.legend(handles=actual_lines + prediction_lines, loc='upper left')
     plt.xticks(rotation=45)
@@ -98,8 +99,21 @@ def animate(i):  # update the y values (every 1000ms)
 with st.spinner('Predicting...'):
     the_plot = st.pyplot(plt)
     init()
+    images = []
     for i in range(len(X)):
         animate(i)
-        time.sleep(0.05)
+        # time.sleep(0.05)
         
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        images.append(imageio.imread(buf))
+        
+    # Save images as GIF
+    imageio.mimsave("plot.gif", images)
+    
     st.success('Done!')
+
+with open('plot.gif', 'rb') as f:
+   if st.download_button('Download GIF', f, file_name='plot.gif'):
+       st.stop()
