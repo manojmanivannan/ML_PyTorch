@@ -7,7 +7,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir pandas scipy streamlit
 RUN pip install --no-cache-dir matplotlib
 COPY ./gen/sample_generator.py .
-COPY ./simulator/main.py .
+COPY ./app_simulator/main.py .
 # Copy and install dependencies
 
 

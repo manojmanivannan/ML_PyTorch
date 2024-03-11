@@ -77,7 +77,7 @@ chunk_target = 24
 
 def animate(i):  # update the y values (every 1000ms)
     global chunk_start, chunk_target
-    r = requests.post('http://app:8000/predict', data=json.dumps({'input_data':X[chunk_start].tolist(), 'mean': overall_mean.tolist(), 'std': overall_std.tolist()}))
+    r = requests.post('http://torch_server:8000/predict', data=json.dumps({'input_data':X[chunk_start].tolist(), 'mean': overall_mean.tolist(), 'std': overall_std.tolist()}))
     predictions = json.loads(r.text)['prediction'][0]
     
     for col, pred, act_line, pred_line in zip(columns, predictions, actual_lines, prediction_lines):

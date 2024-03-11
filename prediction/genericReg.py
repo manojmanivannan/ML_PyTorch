@@ -170,7 +170,7 @@ class StepByStep(object):
         except AttributeError:
             pass
     
-    def train(self, n_epochs, seed=42):
+    def train(self, n_epochs, print_every=10,seed=42):
         # To ensure reproducibility of the training process
         self.set_seed(seed)
 
@@ -183,6 +183,7 @@ class StepByStep(object):
             # Performs training using mini-batches
             loss = self._mini_batch(validation=False)
             self.losses.append(loss)
+            
 
             # VALIDATION
             # no gradients in validation!
@@ -193,6 +194,8 @@ class StepByStep(object):
 
             self._epoch_schedulers(val_loss)
 
+            if (epoch + 1) % print_every == 0:
+                print(f'Epoch [{epoch+1}/{n_epochs}]\tTraining-Loss: {loss:.4f}\tValidation-Loss: {val_loss:.4f}')
             # If a SummaryWriter has been set...
             if self.writer:
                 scalars = {'training': loss}
@@ -218,12 +221,8 @@ class StepByStep(object):
         torch.save(checkpoint, filename)
 
     def save_model_class(self, filename):
-        import pickle
- 
-
-        with open(filename, 'wb') as filehandler: 
-            pickle.dump(self.model, filehandler)
-            
+        torch.save(self.model, filename)
+        
     def load_checkpoint(self, filename):
         # Loads dictionary
         checkpoint = torch.load(filename)

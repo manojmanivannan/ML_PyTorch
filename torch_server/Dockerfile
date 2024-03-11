@@ -4,14 +4,14 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Set working directory
 WORKDIR /app
 
-COPY ./src/requirements.txt .
+COPY ./torch_server/requirements.txt .
 # Copy and install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
 COPY ./model/model_checkpoint.pth .
 COPY ./prediction/nn_models.py .
-COPY ./src/main.py .
+COPY ./torch_server/main.py .
 
 EXPOSE 8000
 # Command to run the application
