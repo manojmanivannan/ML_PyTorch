@@ -1,19 +1,32 @@
-FROM pytorch/pytorch:latest
-ENV PYTHONDONTWRITEBYTECODE=1
+FROM pytorch/torchserve:latest-cpu
 
-RUN apt-get update && \
-    apt-get install -y libgomp1
+
 # Set working directory
-WORKDIR /app
+COPY ./model/model_onnx.onnx /home/model-server/
+COPY ./model/model_data.json /home/model-server/
+COPY ./torch_server/c_handler.py /home/model-server/
+COPY ./torch_server/config.properties /home/model-server/
+WORKDIR /home/model-server
 
-COPY ./torch_server/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+RUN torch-model-archiver \
+--force \
+--model-name onnx \
+--version 1.0 \
+--serialized-file model_onnx.onnx \
+--handler c_handler.py \
+--extra-files model_data.json \
+--export-path ./model-store
 
 
-COPY ./model/model_onnx.onnx .
-COPY ./model/model_data.json .
-COPY ./torch_server/main.py .
 
-EXPOSE 8000
+# COPY ./model/model_onnx.onnx .
+# COPY ./model/model_data.json .
+# COPY ./torch_server/main.py .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["torchserve", \
+ "--start", \
+ "--ncs", \
+ "--ts-config=config.properties", \
+ "--model-store=model-store", \
+ "--models=onnx.mar"]
