@@ -80,9 +80,10 @@ def init():  # give a clean slate to start
 
 def animate(i):  # update the y values (every 1000ms)
     global window_size
-    r = requests.post('http://torch_server:8000/predict', data=json.dumps({'input_data':X[i].tolist(), 'mean': overall_mean.tolist(), 'std': overall_std.tolist()}))
+    r = requests.post('http://torch_server:8080/predictions/onnx', json=json.dumps({"input": X[i].tolist(),  'mean': overall_mean.tolist(), 'std': overall_std.tolist()}), headers={'Content-Type': 'application/json'})
       
-    predictions = json.loads(r.text)['prediction']
+    print(r.text)
+    predictions = json.loads(r.text)
     
     for col, pred, act_line, pred_line in zip(columns, predictions, actual_lines, prediction_lines):
     

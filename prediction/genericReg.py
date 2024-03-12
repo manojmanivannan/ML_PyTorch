@@ -10,12 +10,11 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import DataLoader, TensorDataset, random_split
 from torch.utils.tensorboard import SummaryWriter
 
 
 class StepByStep(object):
-    def __init__(self, model, loss_fn, optimizer):
+    def __init__(self, model, loss_fn, optimizer, device=None):
         # Here we define the attributes of our class
         
         # We start by storing the arguments as attributes 
@@ -23,7 +22,11 @@ class StepByStep(object):
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        if device=='cpu':
+            self.device = 'cpu'
+        else:
+            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            
         # Let's send the model to the specified device right away
         self.model.to(self.device)
 
