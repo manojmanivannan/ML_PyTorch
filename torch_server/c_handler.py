@@ -18,12 +18,33 @@ class ONNXHandler(BaseHandler):
             model_data = json.loads(f.read())
             self.window_size = model_data["window_size"]
             self.selected_cols = model_data["selected_columns"]
+            self.original_data_mean = model_data["overall_mean"]
+            self.original_data_std = model_data["overall_std"]
             
+            
+            
+    def preprocess(self,input_data):
+        
+        reshaped_data =np.array(input_data, dtype=np.float32).reshape(1, self.window_size, len(self.selected_cols))
+        normalized_data = (reshaped_data - np.array(self.data_mean)) / np.array(self.data_std)
+        return normalized_data
+        
     def handle(self,data, context):
-        body = (data[0]['body'])
+        body = json.loads(data[0]['body'])
+        input_data = body['input']
+        self.data_mean = body['mean']
+        self.data_std = body['std'] 
+
         
         if hasattr(self.model, "run"):
-            data = np.array(body, dtype=np.float32).reshape(1, self.window_size, len(self.selected_cols))
             
-            results = self.model.run(None, {"input": data})
-            return [i for i in results[0]]
+            normalized_input = self.preprocess(input_data)
+            
+            results = self.model.run(None, {"input": normalized_input.tolist()})
+            
+            return self.postprocess(results[0])
+        
+    def postprocess(self, data):
+        print('Prediction',data)
+        denomalized_results = np.array(data * np.array(self.data_std)) + np.array(self.data_mean)
+        return  denomalized_results.tolist()
