@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import datetime
 from copy import deepcopy
 import torch
@@ -26,6 +27,7 @@ class StepByStep(object):
             self.device = 'cpu'
         else:
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        print("Setting device:", self.device)
             
         # Let's send the model to the specified device right away
         self.model.to(self.device)
@@ -38,6 +40,7 @@ class StepByStep(object):
         self.scheduler = None
         self.is_batch_lr_scheduler = False
         self.clipping = None
+        self.threshold = None
 
         # These attributes are going to be computed internally
         self.losses = []
@@ -56,6 +59,8 @@ class StepByStep(object):
         self.train_step_fn = self._make_train_step_fn()
         # Creates the val_step function for our model and loss
         self.val_step_fn = self._make_val_step_fn()
+        # Creates the custom_val_step function for our model and loss
+        self.custom_val_step_fn = self._make_custom_val_step_fn()
 
     def to(self, device):
         # This method allows the user to specify a different device
@@ -64,9 +69,10 @@ class StepByStep(object):
         try:
             self.device = device
             self.model.to(self.device)
+            print(f"Sending model to {device}.")
         except RuntimeError:
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-            print(f"Couldn't send it to {device}, sending it to {self.device} instead.")
+            print(f"Couldn't send model to {device}, sending it to {self.device} instead.")
             self.model.to(self.device)
 
     def set_loaders(self, train_loader, val_loader=None):
@@ -120,14 +126,33 @@ class StepByStep(object):
             return loss.item()
 
         return perform_val_step_fn
+    
+    def _make_custom_val_step_fn(self):
+        # Builds function that performs a step in the validation loop
+        def perform_val_step_fn(x, y):
+            # Sets model to EVAL mode
+            self.model.eval()
+
+            # Step 1 - Computes our model's predicted output - forward pass
+            yhat = self.model(x)
+            # Step 2 - Computes the loss
+            loss = ((y - yhat)**2).mean(dim=1).detach().cpu().numpy()
+            # There is no need to compute Steps 3 and 4, since we don't update parameters during evaluation
+            return loss
+
+        return perform_val_step_fn
             
-    def _mini_batch(self, validation=False):
+    def _mini_batch(self, validation=False, get_all_losses=False):
         # The mini-batch can be used with both loaders
         # The argument `validation`defines which loader and 
         # corresponding step function is going to be used
         if validation:
             data_loader = self.val_loader
-            step_fn = self.val_step_fn
+            
+            if get_all_losses:
+                step_fn = self.custom_val_step_fn
+            else:
+                step_fn = self.val_step_fn
         else:
             data_loader = self.train_loader
             step_fn = self.train_step_fn
@@ -144,11 +169,18 @@ class StepByStep(object):
             y_batch = y_batch.to(self.device)
 
             mini_batch_loss = step_fn(x_batch, y_batch)
-            mini_batch_losses.append(mini_batch_loss)
+            
+            if get_all_losses:
+                mini_batch_losses.extend(mini_batch_loss)
+            else:
+                mini_batch_losses.append(mini_batch_loss)
 
             if not validation:
                 self._mini_batch_schedulers(i / n_batches)
-
+        
+        if get_all_losses:
+            return np.array(mini_batch_losses)
+        
         loss = np.mean(mini_batch_losses)
         return loss
 
@@ -213,13 +245,14 @@ class StepByStep(object):
             # Closes the writer
             self.writer.close()
 
-    def save_checkpoint(self, filename):
+    def save_checkpoint(self, filename, **kwargs):
         # Builds dictionary with all elements for resuming training
         checkpoint = {'epoch': self.total_epochs,
                       'model_state_dict': self.model.state_dict(),
                       'optimizer_state_dict': self.optimizer.state_dict(),
                       'loss': self.losses,
-                      'val_loss': self.val_losses}
+                      'val_loss': self.val_losses,
+                      **kwargs}
 
         torch.save(checkpoint, filename)
 
@@ -252,6 +285,26 @@ class StepByStep(object):
         # Detaches it, brings it to CPU and back to Numpy
         return y_hat_tensor.detach().cpu().numpy()
 
+    def generate_reconstruction_errors(self, bins=50):
+        
+        with torch.no_grad():
+            self.reconstruction_losses = self._mini_batch(validation=True, get_all_losses=True)
+        
+        # create bins
+        bin_counts = pd.cut(self.reconstruction_losses, bins=bins).value_counts().sort_index()
+        
+        # Create a pandas frame of visualization
+        self.reconstruction_loss_table = pd.DataFrame({
+            'bin_range': bin_counts.index.astype(str),
+            'frequency': bin_counts
+        })
+        
+    def construct_anomalies(self, percentile: float = None):
+        if self.threshold is None:
+            self.threshold = np.percentile(self.reconstruction_losses, percentile)
+        self.generate_reconstruction_errors()
+        self.anomalies = self.reconstruction_losses > self.threshold
+        
     def plot_losses(self):
         fig = plt.figure(figsize=(10, 4))
         plt.plot(self.losses, label='Training Loss', c='b')
@@ -261,7 +314,7 @@ class StepByStep(object):
         plt.ylabel('Loss')
         plt.legend()
         plt.tight_layout()
-        return fig
+        plt.show()
 
     def add_graph(self):
         # Fetches a single mini-batch so we can use add_graph
