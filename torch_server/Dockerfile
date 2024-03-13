@@ -1,7 +1,6 @@
-FROM pytorch/torchserve:latest-cpu
+FROM pytorch/torchserve:latest-gpu
 
 
-# Set working directory
 COPY ./model/model_onnx.onnx /home/model-server/
 COPY ./model/model_data.json /home/model-server/
 COPY ./torch_server/c_handler.py /home/model-server/
@@ -19,11 +18,6 @@ RUN torch-model-archiver \
 --extra-files model_data.json \
 --export-path ./model-store
 
-
-
-# COPY ./model/model_onnx.onnx .
-# COPY ./model/model_data.json .
-# COPY ./torch_server/main.py .
 
 CMD ["torchserve", \
  "--start", \
