@@ -56,6 +56,31 @@ def get_mean_std_from_array(data_array):
     
     return np.mean(data_array, axis=0), np.std(data_array, axis=0)
 
+def get_min_max_from_array(data_array):
+    """
+    A function to calculate the mean and standard deviation along axis 0 (vertical) of a numpy array or pandas dataframe.
+    
+    Parameters:
+    data_array (numpy.ndarray or pandas.DataFrame): The input data to calculate mean and standard deviation from.
+    
+    Returns:
+    tuple: A tuple containing the mean and standard deviation along axis 0 of the input data_array.
+    """
+
+
+    # check if data_array is an numpy array 
+    if isinstance(data_array, np.ndarray):
+        pass
+  
+    # check if data_array is a pandas dataframe
+    elif isinstance(data_array, pd.DataFrame):
+        data_array = data_array.to_numpy()
+        
+    else:
+        raise ValueError("data_array must be a numpy array or pandas dataframe.")
+    
+    return np.min(data_array, axis=0), np.max(data_array, axis=0)
+
 def normalize_mean_std(data_array, mean=None, std=None):
     """
     Normalize the data_array using the given mean and standard deviation.
@@ -85,6 +110,36 @@ def normalize_mean_std(data_array, mean=None, std=None):
         mean, std = get_mean_std_from_array(data_array)
     
     return (data_array - mean) / std
+
+def normalize_min_max(data_array, min=None, max=None):
+    """
+    Normalize the data_array using the given mean and standard deviation.
+
+    Args:
+        data_array (numpy.ndarray or pd.DataFrame): The input data to be normalized.
+        mean (float): The mean value to be used for normalization.
+        std (float): The standard deviation value to be used for normalization.
+
+    Returns:
+        numpy.ndarray: The normalized data_array.
+    """
+
+
+    # check if data_array is an numpy array 
+    if isinstance(data_array, np.ndarray):
+        pass
+  
+    # check if data_array is a pandas dataframe
+    elif isinstance(data_array, pd.DataFrame):
+        data_array = data_array.to_numpy()
+        
+    else:
+        raise ValueError("data_array must be a numpy array or pandas dataframe.")
+    
+    if min is None or max is None:
+        min, max = get_min_max_from_array(data_array)
+    
+    return (data_array - min) / (max - min)
 
 def train_test_split(features, target, split_ratio=0.8):
     """
